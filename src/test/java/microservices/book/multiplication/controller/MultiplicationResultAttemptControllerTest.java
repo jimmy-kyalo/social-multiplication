@@ -6,6 +6,7 @@ import microservices.book.multiplication.domain.Multiplication;
 import microservices.book.multiplication.domain.MultiplicationResultAttempt;
 import microservices.book.multiplication.domain.User;
 import microservices.book.multiplication.service.MultiplicationService;
+import org.assertj.core.util.Lists;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -24,6 +25,7 @@ import java.util.List;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 
 @RunWith(SpringRunner.class)
@@ -36,7 +38,7 @@ public class MultiplicationResultAttemptControllerTest {
     @Autowired
     private MockMvc mvc;
 
-    // This object will be magically initialized by the initFields method below.
+    // These objects will be magically initialized by the initFields method below.
     private JacksonTester<MultiplicationResultAttempt> jsonResult, jsonResponse, jsonResultAttempt;
     private JacksonTester<List<MultiplicationResultAttempt>> jsonResultAttemptList;
 
@@ -82,4 +84,28 @@ public class MultiplicationResultAttemptControllerTest {
                 ).getJson());
     }
 
+    @Test
+    public void getUserStats() throws Exception {
+        // given
+        User user = new User("jimmy_kyalo");
+        Multiplication multiplication = new Multiplication(50, 70);
+        MultiplicationResultAttempt attempt = new MultiplicationResultAttempt(
+                user, multiplication, 3500, true
+        );
+        List<MultiplicationResultAttempt> recentAttempts = Lists.newArrayList(attempt, attempt);
+        given(multiplicationService
+                .getStatsForUser("jimmy_kyalo"))
+                .willReturn(recentAttempts);
+
+        // when
+        MockHttpServletResponse response = mvc.perform(
+                get("/results").param("alias", "jimmy_kyalo"))
+                .andReturn().getResponse();
+
+        // then
+        assertThat(response.getStatus()).isEqualTo(HttpStatus.OK.value());
+        assertThat(response.getContentAsString()).isEqualTo(
+                jsonResultAttemptList.write(recentAttempts).getJson()
+        );
+    }
 }
